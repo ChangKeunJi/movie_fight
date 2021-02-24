@@ -19,60 +19,80 @@ const fetchData = async (searchTerm) => {
   return response.data.Search;
 };
 
-//! DOM HTML
-
-const root = document.querySelector(".autocomplete");
-root.innerHTML = `
-
-    <label><b>Search for a movie</b></label>
-    <input class="input" />
-    <div class="dropdown">
-        <div class="dropdown-menu">
-            <div class="dropdown-content results"></div>
-        </div>
-    </div>
-
-`;
-
-const input = document.querySelector("input");
-const dropdown = document.querySelector(".dropdown");
-// For hiding dropdown contents by is-active
-const resultsWrapper = document.querySelector(".results");
-// Parent div to append a list
-
-//! Autocomplete function
-
-const onInput = async (event) => {
-  const movies = await fetchData(event.target.value);
-  console.log(movies);
-
-  // Clear previous dropdown items
-  resultsWrapper.innerHTML = "";
-
-  // Render dropdown
-  dropdown.classList.add("is-active");
-
-  for (let movie of movies) {
-    const option = document.createElement("a");
-    option.classList.add("dropdown-item");
-
-    // In case Image is not included in data
+createAutoComplete({
+  // Where to render input & autocomplete results
+  root: document.querySelector(".autocomplete"),
+  // Custom HTML for Dropdown items
+  renderOption(movie) {
     const imgSrc = movie.Poster === "N/A" ? "" : movie.Poster;
+    return `
+    <img src="${imgSrc}" />
+    ${movie.Title} (${movie.Year})
+  `;
+  },
+  onOptionSelect(movie) {
+    onMovieSelect(movie);
+  },
+  inputValue(movie) {
+    return movie.Title;
+  },
+});
 
-    option.innerHTML = `
-        <img src="${imgSrc}" />
-        ${movie.Title}
-      `;
+const onMovieSelect = async (movie) => {
+  const response = await axios.get("http://www.omdbapi.com/", {
+    params: {
+      apikey: "bb572d08",
+      i: movie.imdbID,
+    },
+  });
 
-    resultsWrapper.appendChild(option);
-  }
+  document.querySelector("#summary").innerHTML = movieTemplate(response.data);
 };
 
-//! Event Listener
-input.addEventListener("input", debounce(onInput, 1000));
+const movieTemplate = (movieDetail) => {
+  console.log(movieDetail);
+  return `
 
-document.addEventListener("click", (e) => {
-  if (!root.contains(e.target)) {
-    dropdown.classList.remove("is-active");
-  }
-});
+    <article class="media">
+      <figure>
+        <p class="image">
+          <img src="${movieDetail.Poster}" />
+        </p>
+      </figure>
+
+      <div class="media-content">
+        <div class="content">
+          <h1>${movieDetail.Title}</h1>
+          <h4>${movieDetail.Genre}</h4>
+          <p>${movieDetail.Plot}</p>
+        </div>
+      </div>
+    </article>
+  
+    <article class="notification is-primary">
+      <p class="title">${movieDetail.Awards}</p>
+      <label class="subtitle" >Awards</label>
+    </article>
+
+    <article class="notification is-primary">
+      <p class="title">${movieDetail.BoxOffice}</p>
+     <label class="subtitle" >Box Office</label>
+    </article>
+
+    <article class="notification is-primary">
+      <p class="title">${movieDetail.Metascore}</p>
+      <label class="subtitle" >Metascore</label>
+    </article>
+ 
+    <article class="notification is-primary">
+      <p class="title">${movieDetail.imdbRating}</p>
+      <label class="subtitle" >imdb Rating</label>
+    </article>
+
+    <article class="notification is-primary">
+      <p class="title">${movieDetail.imdbVotes}</p>
+      <label class="subtitle" >imdb Vodes</label>
+    </article>
+
+  `;
+};
